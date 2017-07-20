@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\User;
 use Auth;
 use Validator;
+use App\Role;
 
 class AuthController extends Controller
 {
@@ -18,11 +19,14 @@ class AuthController extends Controller
     public function login() {
         if(Auth::attempt(['email' => request('email'), 'password' => request('password')])){
             $user = Auth::user();
-            $success['token'] =  $user->createToken('LaravelPassport')->accessToken;
-            return response()->json(['success' => $success], 200);
+            $credential['token'] =  $user->createToken('LaravelPassport')->accessToken;
+            return response()->json([
+              'credential' => $credential,
+              'user' => $user
+            ], 200);
         }
         else{
-            return response()->json(['error'=>'Unauthorised'], 401);
+            return response()->json(['errors'=>'Unauthorised'], 401);
         }
     }
 
@@ -40,15 +44,21 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error'=>$validator->errors()], 401);
+            return response()->json(['errors'=>$validator->errors()], 401);
         }
+
+        $roleId = Role::where('role', 'USER')->get()->first()->id;
 
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
-        $user = User::create($input);
-        $success['token'] =  $user->createToken('LaravelPassport')->accessToken;
-        $success['name'] =  $user->name;
+        $input['role_id'] = $roleId;
 
-        return response()->json(['success'=>$success], 200);
+        $user = User::create($input);
+        $credential['token'] =  $user->createToken('LaravelPassport')->accessToken;
+
+        return response()->json([
+          'credential'=>$credential,
+          'user'=>$user
+        ], 200);
     }
 }
